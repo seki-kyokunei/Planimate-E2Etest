@@ -38,5 +38,20 @@ target 'Planimate' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    # Fix "folly/coro/Coroutine.h file not found" in the app target when
+    # building with use_frameworks! (folly headers are consumed by the app
+    # target via RCTAppDelegate but FOLLY_CFG_NO_COROUTINES is only set on pods).
+    installer.aggregate_targets.each do |aggregate_target|
+      aggregate_target.user_project.native_targets.each do |target|
+        target.build_configurations.each do |config|
+          config.build_settings['OTHER_CPLUSPLUSFLAGS'] ||= ['$(inherited)']
+          unless config.build_settings['OTHER_CPLUSPLUSFLAGS'].include?('-DFOLLY_CFG_NO_COROUTINES=1')
+            config.build_settings['OTHER_CPLUSPLUSFLAGS'] << '-DFOLLY_CFG_NO_COROUTINES=1'
+          end
+        end
+      end
+      aggregate_target.user_project.save
+    end
   end
 end
